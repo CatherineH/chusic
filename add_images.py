@@ -12,9 +12,15 @@ parser.add_argument('--foldername', type=str, help='The foldername to search')
 
 def main():
     args = parser.parse_args()
+    # remove the last /, if it exists
+    if args.foldername[-1] == '/':
+        args.foldername = args.foldername[:-1]
     args.foldername = os.path.expanduser(args.foldername)
     new_foldername = args.foldername+"-copy"
     # copy the folder so that we can work on it without worry
+    # this will delete the existing copy
+    if os.path.isdir(new_foldername):
+        shutil.rmtree(new_foldername)
     shutil.copytree(args.foldername, new_foldername)
 
     # recursively walk through the directory structure
@@ -29,7 +35,9 @@ def main():
                 if _dir in mp3_lists.keys():
                     mp3_lists[_dir].append(os.path.join(root, name))
                 else:
-                    mp3_lists[_dir] = []
+                    mp3_lists[_dir] = [os.path.join(root, name)]
+            else:
+                print "file: "+name+" did not match"
             if fnmatch.fnmatch(name, "*.jpg"):
                 os.rename(os.path.join(root, name), os.path.join(root, 'thumb.jpg'))
                 path_images[_dir] = os.path.join(root, 'thumb.jpg')
@@ -41,23 +49,20 @@ def main():
             for _mp3_file in mp3_lists[_path]:
                 # update the metadata for the mp3
                 _image_path = os.path.join(_path, path_images[_path])
-                #_image_path = "thumb.jpg"
                 _audiofile = eyed3.load(_mp3_file)
-                '''
-                _audiofile.tag.version = eyed3.id3.ID3_V2_4
-                # remove the initial number of the track title
-                if _audiofile.tag.title[0].isdigit():
-                    new_title = " ".join(_audiofile.tag.title.split(" ")[1:])
-                    _audiofile.tag.title = unicode(new_title)
-                '''
                 jpgfile = open(_image_path, "rb")
+
                 _audiofile.tag.images.set(0x03, jpgfile.read(), 'image/jpeg')
-                print _image_path
-                #_audiofile.tag.track_num = current_track+1
-                #_audiofile.tag.album = unicode("blo")
+                jpgfile.close()
                 _audiofile.tag.save()
                 current_track += 1
-                #print "saving track: "+_mp3_file
+                print "saving track: "+_mp3_file+" image path was: "+_image_path
+            # test the image information on the tracks
+            for _mp3_file in mp3_lists[_path]:
+                _audiofile = eyed3.load(_mp3_file)
+                saved_image = _audiofile.tag.images
+                print _mp3_file
+                print saved_image
         else:
             print "No cover image found for path: "+_path
 

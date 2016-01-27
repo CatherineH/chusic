@@ -31,14 +31,14 @@ def main():
     for root, dirs, files in os.walk(new_foldername):
         for name in files:
             _dir = root
-            if fnmatch.fnmatch(name, "*.mp3"):
+            if fnmatch.fnmatch(name.lower(), "*.mp3"):
                 if _dir in mp3_lists.keys():
                     mp3_lists[_dir].append(os.path.join(root, name))
                 else:
                     mp3_lists[_dir] = [os.path.join(root, name)]
-            else:
-                print "file: "+name+" did not match"
-            if fnmatch.fnmatch(name, "*.jpg"):
+            #else:
+            #    print "file: "+name+" did not match"
+            if fnmatch.fnmatch(name.lower(), "*.jpg"):
                 os.rename(os.path.join(root, name), os.path.join(root, 'thumb.jpg'))
                 path_images[_dir] = os.path.join(root, 'thumb.jpg')
 
@@ -46,6 +46,7 @@ def main():
         # check to make sure that we also have a cover image for this path
         if _path in path_images.keys():
             current_track = 1
+            print _path
             for _mp3_file in mp3_lists[_path]:
                 # update the metadata for the mp3
                 _image_path = os.path.join(_path, path_images[_path])
@@ -54,15 +55,13 @@ def main():
 
                 _audiofile.tag.images.set(0x03, jpgfile.read(), 'image/jpeg')
                 jpgfile.close()
-                _audiofile.tag.save()
+                _audiofile.tag.save(version=eyed3.id3.ID3_V2_4)
                 current_track += 1
-                print "saving track: "+_mp3_file+" image path was: "+_image_path
+                #print "saving track: "+_mp3_file+" image path was: "+_image_path
             # test the image information on the tracks
             for _mp3_file in mp3_lists[_path]:
                 _audiofile = eyed3.load(_mp3_file)
                 saved_image = _audiofile.tag.images
-                print _mp3_file
-                print saved_image
         else:
             print "No cover image found for path: "+_path
 

@@ -6,22 +6,13 @@ import sys
 import fnmatch
 import eyed3
 import Image
-import shutil
+from chusic import copy_dir
 parser = argparse.ArgumentParser(description='Add images to MP3 tracks')
 parser.add_argument('--foldername', type=str, help='The foldername to search')
 
 def main():
     args = parser.parse_args()
-    # remove the last /, if it exists
-    if args.foldername[-1] == '/':
-        args.foldername = args.foldername[:-1]
-    args.foldername = os.path.expanduser(args.foldername)
-    new_foldername = args.foldername+"-copy"
-    # copy the folder so that we can work on it without worry
-    # this will delete the existing copy
-    if os.path.isdir(new_foldername):
-        shutil.rmtree(new_foldername)
-    shutil.copytree(args.foldername, new_foldername)
+    new_foldername = copy_dir(args.foldername)
 
     # recursively walk through the directory structure
     # if an mp3 is found, add it to the list of tracks for that folder
@@ -46,16 +37,19 @@ def main():
         # check to make sure that we also have a cover image for this path
         if _path in path_images.keys():
             current_track = 1
-            print _path
             for _mp3_file in mp3_lists[_path]:
                 # update the metadata for the mp3
                 _image_path = os.path.join(_path, path_images[_path])
                 _audiofile = eyed3.load(_mp3_file)
-                jpgfile = open(_image_path, "rb")
 
+                if _audiofile.tag is None:
+                    print "initializing tag"
+                    # the track likely has no tags
+                    _audiofile.tag = eyed3.id3.tag.Tag()
+                jpgfile = open(_image_path, "rb")
                 _audiofile.tag.images.set(0x03, jpgfile.read(), 'image/jpeg')
                 jpgfile.close()
-                _audiofile.tag.save(version=eyed3.id3.ID3_V2_4)
+                _audiofile.tag.save(filename=_mp3_file,version=eyed3.id3.ID3_V2_4)
                 current_track += 1
                 #print "saving track: "+_mp3_file+" image path was: "+_image_path
             # test the image information on the tracks

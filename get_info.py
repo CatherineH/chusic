@@ -6,6 +6,7 @@ import os.path
 import sys
 import fnmatch
 import eyed3
+from chusic import get_music
 from pandas import DataFrame
 from tinytag import TinyTag
 
@@ -17,19 +18,10 @@ parser.add_argument('--foldername', type=str, help='The foldername to search')
 def main():
     args = parser.parse_args()
     args.foldername = os.path.expanduser(args.foldername)
+    new_foldername = args.foldername
     # keep a list of all cues and flacs
-    music_filenames = []
-
-    for root, dirs, files in os.walk(args.foldername):
-        #print dirs
-        for name in files:
-            if fnmatch.fnmatch(name, "*.flac") or fnmatch.fnmatch(name, "*.mp3"):
-                # check to see if that file already exists in the list
-                for music_filename in music_filenames:
-                    if music_filename.split("/")[-1] == name:
-                        print 'found possible duplicate file, old one is: '+music_filename
-                        print 'new one is: '+os.path.join(root, name)
-                music_filenames.append(os.path.join(root, name))
+    file_lists = get_music(new_foldername=new_foldername)
+    music_filenames = file_lists['mp3']
     # now, for each file, get the mp3 tags and get the date created
     music_dataframe = []
     for music_file in music_filenames:

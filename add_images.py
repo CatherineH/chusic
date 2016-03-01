@@ -61,8 +61,7 @@ def main():
                     img.show()
 
                     response = raw_input("Is album cover acceptable ("
-                                         ""+_audiofile.tag.artist+") ("
-                                         ""+_audiofile.tag.album+")? y/n")
+                                         ""+cover_key.encode('utf-8')+")? y/n")
 
                     if response == "y":
                         seen_covers[cover_key] = web_image

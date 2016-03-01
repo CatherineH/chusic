@@ -181,10 +181,11 @@ def get_image(album="", artist="", search=True):
     cover_filename = os.path.join(cover_location, album+"_"+artist+".jpg")
     print os.path.exists(cover_filename)
     if (not os.path.exists(cover_filename)) and search:
-        print "searching web"
         key = os.environ.get('GOOGLE_API_KEY')
         service = build("customsearch", "v1", developerKey=key)
         query = album+"+"+artist+"+album+art"
+        print "searching web for: "+query
+
         try:
             res = service.cse().list(
                 q=query, cx="015111312832054302537:ijkg6sdfkiy", searchType='image',

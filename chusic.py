@@ -7,6 +7,11 @@ from googleapiclient.discovery import build
 from PIL import Image
 import urllib
 import time
+from send2trash import send2trash
+from subprocess import call
+from mutagen.flac import FLAC
+from mutagen.mp4 import MP4
+
 
 separators = ['_', '-']
 
@@ -24,6 +29,7 @@ def guess_album(filename, artist='', title=''):
     album = re.sub('[0-9]+$', '', album)
     album = re.sub('cd\s*\d', '', album)
     return album.capitalize()
+
 
 def strip_filename(filename):
     title = os.path.splitext(os.path.basename(filename))
@@ -199,6 +205,65 @@ def get_image(album="", artist="", search=True):
     else:
         return [cover_filename, 'image/jpeg']
 
-    # Be nice to Google and they'll be nice back :)
 
+def convert_files(root, cuesheet=None, thumbnail_filename=None):
+    # convert the other flacs to mp3
+    curr_dir_files = sorted(os.listdir(root))
+    current_track = 0
+    for _file in curr_dir_files:
+        if fnmatch(_file, '*.flac'):
+            in_flac = os.path.join(root,_file)
+            out_mp3 = in_flac.replace('flac', 'mp3')
+            print out_mp3
+            call(('avconv','-i', in_flac, '-qscale:a', '0',
+                             out_mp3))
+
+            _flac_audio = FLAC(in_flac)
+
+            # update the metadata for the mp3
+            _audiofile = load(out_mp3)
+            if thumbnail_filename is not None:
+                _audiofile.tag.images.set(0x03, thumbnail_filename, 'jpg')
+            elif len(_flac_audio.pictures) >0:
+                _audiofile.tag.images.set(0x03, _flac_audio.pictures[0], 'jpg')
+
+            if cuesheet is not None:
+                _audiofile.tag.artist = unicode(cuesheet.performer)
+                _audiofile.tag.album = unicode(cuesheet.title)
+                _audiofile.tag.title = unicode(cuesheet.tracks[current_track])
+            else:
+                _audiofile.tag.artist = _flac_audio.tags['Artist'][0]
+                _audiofile.tag.album = _flac_audio.tags['Album'][0]
+                _audiofile.tag.title = _flac_audio.tags['Title'][0]
+            _audiofile.tag.track_num = current_track+1
+            _audiofile.tag.save()
+            current_track += 1
+            # move the flac to the trash
+            send2trash(os.path.join(root, _file))
+        if fnmatch(_file, '*.m4a'):
+            in_flac = os.path.join(root, _file)
+            out_mp3 = in_flac.replace('m4a', 'mp3')
+            parts = ('avconv','-i', in_flac, '-qscale:a', '0',
+                             out_mp3)
+            print ' '.join(parts)
+            call(parts)
+            _mp4_audio = MP4(in_flac)
+            # update the metadata for the mp3
+            _audiofile = load(out_mp3)
+            if thumbnail_filename is not None:
+                _audiofile.tag.images.set(0x03, thumbnail_filename, 'jpg')
+            if cuesheet is not None:
+                _audiofile.tag.artist = unicode(cuesheet.performer)
+                _audiofile.tag.album = unicode(cuesheet.title)
+                _audiofile.tag.title = unicode(cuesheet.tracks[current_track])
+
+            else:
+                _audiofile.tag.artist = _mp4_audio['\xa9ART'][0]
+                _audiofile.tag.album = _mp4_audio['\xa9alb'][0]
+                _audiofile.tag.title = _mp4_audio['\xa9nam'][0]
+            _audiofile.tag.track_num = current_track+1
+            _audiofile.tag.save()
+            current_track += 1
+            # move the flac to the trash
+            send2trash(os.path.join(root, _file))
 

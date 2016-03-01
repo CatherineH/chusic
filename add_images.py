@@ -11,11 +11,17 @@ from chusic import copy_dir, get_music, get_image
 parser = argparse.ArgumentParser(description='Add images to MP3 tracks')
 parser.add_argument('--foldername', type=str, help='The foldername to search')
 parser.add_argument('--online', dest='web_search', action='store_true', help='search online for images')
-parser.set_defaults(web_search=False)
+parser.add_argument('--copy', dest='copy', action='store_true',
+                    help='make changes to a copy')
 
+parser.set_defaults(web_search=False)
+parser.set_defaults(copy=False)
 def main():
     args = parser.parse_args()
-    new_foldername = args.foldername #copy_dir(args.foldername)
+    if args.copy:
+        new_foldername = copy_dir(args.foldername)
+    else:
+        new_foldername = args.foldername
     file_lists = get_music(new_foldername=new_foldername)
     mp3_lists = file_lists['mp3']
     path_images = file_lists['images']

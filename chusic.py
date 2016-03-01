@@ -267,4 +267,26 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
             current_track += 1
             # move the flac to the trash
             send2trash(os.path.join(root, _file))
+        if fnmatch(_file, '*.wma'):
+            in_flac = os.path.join(root, _file)
+            out_mp3 = in_flac.replace('wma', 'mp3')
+            parts = ('avconv','-i', in_flac, '-qscale:a', '0',
+                             out_mp3)
+            print ' '.join(parts)
+            call(parts)
+            #_mp4_audio = MP4(in_flac)
+            # update the metadata for the mp3
+            _audiofile = load(out_mp3)
+            if thumbnail_filename is not None:
+                _audiofile.tag.images.set(0x03, thumbnail_filename, 'jpg')
+            if cuesheet is not None:
+                _audiofile.tag.artist = unicode(cuesheet.performer)
+                _audiofile.tag.album = unicode(cuesheet.title)
+                _audiofile.tag.title = unicode(cuesheet.tracks[current_track])
+
+            _audiofile.tag.track_num = current_track+1
+            _audiofile.tag.save()
+            current_track += 1
+            # move the flac to the trash
+            send2trash(os.path.join(root, _file))
 

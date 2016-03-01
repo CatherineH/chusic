@@ -4,7 +4,7 @@ import subprocess
 import argparse
 import os
 import sys
-import fnmatch
+from fnmatch import fnmatch
 from chusic import copy_dir, convert_files
 from cueparser import CueSheet
 from send2trash import send2trash
@@ -24,12 +24,12 @@ def main():
         cue_filenames = []
         thumbnail_filename = None
         for name in files:
-            if fnmatch.fnmatch(name, "*.flac") or fnmatch.fnmatch(name,
-                                                                  ".m4a"):
+            if fnmatch(name, "*.flac") or fnmatch(name, ".m4a") or fnmatch(
+                    name, '.wma'):
                 flac_filenames.append(os.path.join(root, name))
-            if fnmatch.fnmatch(name, "*.cue"):
+            if fnmatch(name, "*.cue"):
                 cue_filenames.append(os.path.join(root, name))
-            if fnmatch.fnmatch(name, "*.jpg"):
+            if fnmatch(name, "*.jpg"):
                 thumbnail_filename = os.path.join(root, name)
         # we should now have exactly one flac and one cue file
         if len(flac_filenames) == 1 and len(cue_filenames) == 1:

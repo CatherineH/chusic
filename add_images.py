@@ -10,6 +10,8 @@ eyed3.log.setLevel("ERROR")
 from chusic import copy_dir, get_music, get_image
 parser = argparse.ArgumentParser(description='Add images to MP3 tracks')
 parser.add_argument('--foldername', type=str, help='The foldername to search')
+parser.add_argument('--online', dest='web_search', action='store_true', help='search online for images')
+parser.set_defaults(web_search=False)
 
 def main():
     args = parser.parse_args()
@@ -18,7 +20,7 @@ def main():
     mp3_lists = file_lists['mp3']
     path_images = file_lists['images']
     seen_covers = {}
-    web_search = False
+    web_search = args.web_search
     for _path in mp3_lists.keys():
         current_track = 1
         for _mp3_file in mp3_lists[_path]:
@@ -42,6 +44,7 @@ def main():
                                     version=eyed3.id3.ID3_V2_4)
             else:
                 if cover_key not in seen_covers.keys():
+                    print "cover key not in seen covers, going to search the web"
                     [web_image, mime] = get_image(_audiofile.tag.album,
                                           _audiofile.tag.artist,
                                                   web_search)

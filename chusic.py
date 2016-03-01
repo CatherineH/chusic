@@ -166,13 +166,16 @@ def reorganize_music(root, mp3_lists):
 
 
 def get_image(album="", artist="", search=True):
+    print "getting image from web"
     # first, check to see whether the file already exists in the covers
     cover_location = os.path.expanduser("~/covers")
     if not os.path.exists(cover_location):
         os.makedirs(cover_location)
+    print "created cover directory"+str(search)
     cover_filename = os.path.join(cover_location, album+"_"+artist+".jpg")
-    if not os.path.exists(cover_filename) and search:
-
+    print os.path.exists(cover_filename)
+    if (not os.path.exists(cover_filename)) and search:
+        print "searching web"
         key = os.environ.get('GOOGLE_API_KEY')
         service = build("customsearch", "v1", developerKey=key)
         query = album+"+"+artist+"+album+art"
@@ -186,7 +189,8 @@ def get_image(album="", artist="", search=True):
             mime = item['mime']
             _image = urllib.urlretrieve(item['link'], cover_filename)
             return [_image[0], mime]
-        except:
+        except Exception as e:
+            print e
             return [None, None]
     elif not os.path.exists(cover_filename):
         fhandle = open(cover_filename, 'a')

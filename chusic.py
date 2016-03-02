@@ -11,6 +11,11 @@ from send2trash import send2trash
 from subprocess import call
 from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
+import urllib2
+import ast
+import wget
+from mimetypes import read_mime_types
+from collections import Counter
 
 
 separators = ['_', '-']
@@ -170,35 +175,21 @@ def reorganize_music(root, mp3_lists):
             new_filename = os.path.join(directory, os.path.basename(_mp3_file))
             copyfile(_mp3_file, new_filename)
 
-
-def get_image(album="", artist="", search=True):
-    print "getting image from web"
+def make_cover_folder(album, artist):
     # first, check to see whether the file already exists in the covers
     cover_location = os.path.expanduser("~/covers")
     if not os.path.exists(cover_location):
         os.makedirs(cover_location)
-    print "created cover directory"+str(search)
     cover_filename = os.path.join(cover_location, album+"_"+artist+".jpg")
-    print os.path.exists(cover_filename)
+    return cover_filename
+
+
+def get_image(album="", artist="", search=True):
+    print "getting image from web"
+    cover_filename = make_cover_folder(album, artist)
     if (not os.path.exists(cover_filename)) and search:
-        key = os.environ.get('GOOGLE_API_KEY')
-        service = build("customsearch", "v1", developerKey=key)
-        query = album+"+"+artist+"+album+art"
-        print "searching web for: "+query
-
-        try:
-            res = service.cse().list(
-                q=query, cx="015111312832054302537:ijkg6sdfkiy", searchType='image',
-                num=1, ).execute()
-            time.sleep(1.5)
-
-            item = res['items'][0]
-            mime = item['mime']
-            _image = urllib.urlretrieve(item['link'], cover_filename)
-            return [_image[0], mime]
-        except Exception as e:
-            print e
-            return [None, None]
+        # first, search xbox live
+        
     elif not os.path.exists(cover_filename):
         fhandle = open(cover_filename, 'a')
         fhandle.close()
@@ -289,4 +280,64 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
             current_track += 1
             # move the flac to the trash
             send2trash(os.path.join(root, _file))
+
+def google_image_search(album, artist):
+    cover_filename = make_cover_folder(album, artist)
+    key = os.environ.get('GOOGLE_API_KEY')
+    service = build("customsearch", "v1", developerKey=key)
+    query = album+"+"+artist+"+album+art"
+    print "searching web for: "+query
+
+    try:
+        res = service.cse().list(
+            q=query, cx="015111312832054302537:ijkg6sdfkiy", searchType='image',
+            num=1, ).execute()
+        time.sleep(1.5)
+
+        item = res['items'][0]
+        mime = item['mime']
+        _image = urllib.urlretrieve(item['link'], cover_filename)
+        return [_image[0], mime]
+    except Exception as e:
+        print e
+        return [None, None]
+
+def xboxlive_image_search(album, artist):
+    cover_filename = make_cover_folder(album, artist)
+    service = "https://datamarket.accesscontrol.windows.net/v2/OAuth2-13"
+
+    # you will need to generate your own client id and key in Azure
+    clientId = "chusic"
+    clientSecret = os.environ.get('BING_API_KEY')
+
+    artist = 'Boston'
+    album = 'Don\'t Look Back'
+
+    post_data = {"client_id": clientId, "client_secret": clientSecret,
+                "scope": "http://music.xboxlive.com",
+                "grant_type": "client_credentials"}
+
+    data = urllib.urlencode(post_data)
+    req = urllib2.Request(service, data)
+    response = urllib2.urlopen(req)
+    response_string = response.read()
+
+    response_string = ast.literal_eval(response_string)
+    token = urllib.quote_plus(response_string['access_token'])
+    query = urllib.quote_plus(artist)
+    music_url = "https://music.xboxlive.com/1/content/music/search?q" \
+                "="+query+"&accessToken=Bearer+" + token
+    request = urllib2.Request(music_url)
+    response = urllib2.urlopen(request)
+    literal_data = response.read()
+    literal_data = literal_data.replace(":false", ":False")
+    literal_data = literal_data.replace(":true", ":True")
+
+    data = ast.literal_eval(literal_data)
+    for _album in data['Albums']['Items']:
+        if Counter(_album['Name']) == Counter(album):
+            wget.download()
+            temp_filename = wget.download(_album['ImageUrl'], out=cover_filename)
+            mime_type = read_mime_types(temp_filename)
+            return [temp_filename, mime_type]
 

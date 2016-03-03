@@ -146,7 +146,8 @@ def get_music(new_foldername):
                     mp3_lists[_dir] = [os.path.join(root, name)]
             #else:
             #    print "file: "+name+" did not match"
-            if fnmatch(name.lower(), "*.jpg"):
+            if fnmatch(name.lower(), "*.jpg") or fnmatch(name.lower(),
+                                                         "*.jpeg"):
                 os.rename(os.path.join(root, name), os.path.join(root, 'thumb.jpg'))
                 path_images[_dir] = os.path.join(root, 'thumb.jpg')
     return {'mp3': mp3_lists, 'images': path_images}
@@ -189,13 +190,22 @@ def get_image(album="", artist="", search=True):
     cover_filename = make_cover_folder(album, artist)
     if (not os.path.exists(cover_filename)) and search:
         # first, search xbox live
+        cover_filename = None
+        try:
+            cover_filename = xboxlive_image_search(album, artist)
+        except Exception as e:
+            print "xbox failed for reason: "+str(e)
+
+        if cover_filename is None:
+            cover_filename = google_image_search(album, artist)
+        return cover_filename
         
     elif not os.path.exists(cover_filename):
         fhandle = open(cover_filename, 'a')
         fhandle.close()
-        return [cover_filename, 'image/jpeg']
+        return cover_filename
     else:
-        return [cover_filename, 'image/jpeg']
+        return cover_filename
 
 
 def convert_files(root, cuesheet=None, thumbnail_filename=None):
@@ -281,11 +291,12 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
             # move the flac to the trash
             send2trash(os.path.join(root, _file))
 
+
 def google_image_search(album, artist):
     cover_filename = make_cover_folder(album, artist)
     key = os.environ.get('GOOGLE_API_KEY')
     service = build("customsearch", "v1", developerKey=key)
-    query = album+"+"+artist+"+album+art"
+    query = urllib.quote_plus(album+"+"+artist)
     print "searching web for: "+query
 
     try:
@@ -295,12 +306,12 @@ def google_image_search(album, artist):
         time.sleep(1.5)
 
         item = res['items'][0]
-        mime = item['mime']
         _image = urllib.urlretrieve(item['link'], cover_filename)
-        return [_image[0], mime]
+        return _image[0]
     except Exception as e:
         print e
-        return [None, None]
+        return None
+
 
 def xboxlive_image_search(album, artist):
     cover_filename = make_cover_folder(album, artist)
@@ -309,9 +320,6 @@ def xboxlive_image_search(album, artist):
     # you will need to generate your own client id and key in Azure
     clientId = "chusic"
     clientSecret = os.environ.get('BING_API_KEY')
-
-    artist = 'Boston'
-    album = 'Don\'t Look Back'
 
     post_data = {"client_id": clientId, "client_secret": clientSecret,
                 "scope": "http://music.xboxlive.com",
@@ -327,17 +335,21 @@ def xboxlive_image_search(album, artist):
     query = urllib.quote_plus(artist)
     music_url = "https://music.xboxlive.com/1/content/music/search?q" \
                 "="+query+"&accessToken=Bearer+" + token
-    request = urllib2.Request(music_url)
-    response = urllib2.urlopen(request)
+    try:
+        request = urllib2.Request(music_url)
+        response = urllib2.urlopen(request)
+    except Exception as e:
+        raise Exception("xboxlive music request failed for reason: "+str(e))
     literal_data = response.read()
     literal_data = literal_data.replace(":false", ":False")
     literal_data = literal_data.replace(":true", ":True")
 
     data = ast.literal_eval(literal_data)
     for _album in data['Albums']['Items']:
-        if Counter(_album['Name']) == Counter(album):
-            wget.download()
-            temp_filename = wget.download(_album['ImageUrl'], out=cover_filename)
-            mime_type = read_mime_types(temp_filename)
-            return [temp_filename, mime_type]
+        print _album['Name']+" "+str(_album['Artists'][0]['Artist']['Name'])
+        if album.find(_album['Name']) >=0:
+            for _artist in _album['Artists']:
+                if artist.find(_artist['Artist']['Name'])>=0:
+                    temp_filename = wget.download(_album['ImageUrl'], out=cover_filename)
+                    return temp_filename
 

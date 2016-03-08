@@ -4,7 +4,6 @@ from fnmatch import fnmatch
 import re
 from eyed3 import load
 from googleapiclient.discovery import build
-from PIL import Image
 import urllib
 import time
 from send2trash import send2trash
@@ -14,8 +13,7 @@ from mutagen.mp4 import MP4
 import urllib2
 import ast
 import wget
-from mimetypes import read_mime_types
-from collections import Counter
+
 
 
 separators = ['_', '-']
@@ -217,7 +215,7 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
             in_flac = os.path.join(root,_file)
             out_mp3 = in_flac.replace('flac', 'mp3')
             print out_mp3
-            call(('avconv','-i', in_flac, '-qscale:a', '0',
+            call(('avconv', '-i', in_flac, '-qscale:a', '0',
                              out_mp3))
 
             _flac_audio = FLAC(in_flac)
@@ -296,21 +294,23 @@ def google_image_search(album, artist):
     cover_filename = make_cover_folder(album, artist)
     key = os.environ.get('GOOGLE_API_KEY')
     service = build("customsearch", "v1", developerKey=key)
-    query = urllib.quote_plus(album+"+"+artist)
+    query = album+"+"+artist
     print "searching web for: "+query
-
     try:
         res = service.cse().list(
             q=query, cx="015111312832054302537:ijkg6sdfkiy", searchType='image',
-            num=1, ).execute()
-        time.sleep(1.5)
-
-        item = res['items'][0]
-        _image = urllib.urlretrieve(item['link'], cover_filename)
-        return _image[0]
+            num=10, ).execute()
     except Exception as e:
-        print e
-        return None
+        print "Google search failed for reason: "+str(e)
+    time.sleep(1.5)
+    images = []
+    print res.items()
+    for i in range(0, min(10, len(res.items()))):
+        item = res['items'][i]
+        _image = urllib.urlretrieve(item['link'])
+        print _image
+        images.append(_image[0])
+    return images
 
 
 def xboxlive_image_search(album, artist):
@@ -346,7 +346,6 @@ def xboxlive_image_search(album, artist):
 
     data = ast.literal_eval(literal_data)
     for _album in data['Albums']['Items']:
-        print _album['Name']+" "+str(_album['Artists'][0]['Artist']['Name'])
         if album.find(_album['Name']) >=0:
             for _artist in _album['Artists']:
                 if artist.find(_artist['Artist']['Name'])>=0:

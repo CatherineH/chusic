@@ -6,7 +6,8 @@ import sys
 import fnmatch
 from mimetypes import guess_type
 import eyed3
-import Image
+from PIL import Image
+from resizeimage import resizeimage
 eyed3.log.setLevel("ERROR")
 from chusic import copy_dir, get_music, get_image
 parser = argparse.ArgumentParser(description='Add images to MP3 tracks')
@@ -20,6 +21,7 @@ parser.add_argument('--ignore', dest='ignore', action='store_true',
 parser.set_defaults(web_search=False)
 parser.set_defaults(copy=False)
 parser.set_defaults(ignore=False)
+
 def main():
     args = parser.parse_args()
     if args.copy:
@@ -63,33 +65,46 @@ def main():
                         print "search failed for: ("+cover_key+")"
                         continue
                     try:
-                        img = Image.open(web_image)
-                        img.show()
-
-                        response = raw_input("Is album cover acceptable ("
-                                         ""+cover_key.encode('utf-8')+")? y/n")
+                        if isinstance(web_image, list):
+                            for _item in web_image:
+                                if check_image(_item, cover_key):
+                                    seen_covers[cover_key] = _item
+                                    break
+                        if isinstance(web_image, basestring):
+                            if check_image(web_image, cover_key):
+                                seen_covers[cover_key] = web_image
                     except:
                         print "Critical failure on: "+cover_key
+                        seen_covers[cover_key] = 'invalid'
                         continue
-                    if response == "y":
-                        seen_covers[cover_key] = web_image
-                        jpgfile = open(web_image, "rb")
-                        mime = guess_type(web_image)[0]
-                        print mime
-                        _audiofile.tag.images.set(0x03,  jpgfile.read(), mime)
-                        jpgfile.close()
-                        _audiofile.tag.save(filename=_mp3_file,version=eyed3.id3.ID3_V2_4)
-                    else:
-                        seen_covers[cover_key] = "invalid"
-                else:
-                    if seen_covers[cover_key] != "invalid":
-                        jpgfile = open(seen_covers[cover_key], "rb")
-                        mime = guess_type(seen_covers[cover_key])[0]
-                        _audiofile.tag.images.set(0x03,  jpgfile.read(), mime)
-                        jpgfile.close()
-                        _audiofile.tag.save(filename=_mp3_file,version=eyed3.id3.ID3_V2_4)
+
+                if seen_covers[cover_key] != "invalid":
+                    jpgfile = open(seen_covers[cover_key], "rb")
+                    img = Image.open(jpgfile)
+                    img = img.resize((400, 400))
+                    img.save(seen_covers[cover_key])
+                    jpgfile.close()
+
+                    jpgfile = open(seen_covers[cover_key], "rb")
+
+
+                    mime = guess_type(seen_covers[cover_key])[0]
+                    _audiofile.tag.images.set(0x03,  jpgfile.read(), mime)
+                    jpgfile.close()
+                    _audiofile.tag.save(filename=_mp3_file,version=eyed3.id3.ID3_V2_4)
             current_track += 1
             #print "saving track: "+_mp3_file+" image path was: "+_image_path
+
+
+def check_image(item, cover_key):
+    img = Image.open(item)
+    img.show()
+
+    response = raw_input("Is album cover acceptable ("+cover_key.encode('utf-8')+")? y/n")
+    if response == "y":
+        return True
+    else:
+        return False
 
 if __name__ == "__main__":
     sys.exit(main())

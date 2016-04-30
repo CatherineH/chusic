@@ -19,9 +19,12 @@ separators = ['_', '-']
 
 def main():
     args = parser.parse_args()
-    file_lists = get_music(new_foldername=args.foldername)
-    mp3_lists = file_lists['mp3']
-    reorganize_music(args.destination, mp3_lists)
+    if args.destination is not None:
+        file_lists = get_music(new_foldername=args.foldername)
+        mp3_lists = file_lists['mp3']
+        reorganize_music(args.destination, mp3_lists)
+    else:
+        print("Please specify a destination folder")
 
 
 if __name__ == "__main__":

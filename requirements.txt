@@ -1,3 +1,5 @@
+google-api-python-client
+eyed3
 wget
 python-resize-image
 mutagen

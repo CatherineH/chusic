@@ -4,13 +4,13 @@ from fnmatch import fnmatch
 import re
 from eyed3 import load
 from googleapiclient.discovery import build
-import urllib
+
 import time
 from send2trash import send2trash
 from subprocess import call
 from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
-import urllib2
+
 import ast
 import wget
 
@@ -22,8 +22,8 @@ separators = ['_', '-']
 def guess_album(filename, artist='', title=''):
     # first, try with the full filename
     filename = strip_filename(filename)
-    print "guess album filename: "+filename+" artist: "+artist+" title: " \
-                                                               ""+title
+    print("guess album filename: "+filename+" artist: "+artist+" title: " \
+                                                               ""+title)
     album = filename.lower().replace(artist.lower(), '')
     album = album.lower().replace(title.lower(), '')
     album = album.replace('-copy', '')
@@ -61,7 +61,7 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
         if len(parts) >= 2:
             candidates.append(separator)
     if len(candidates) != 1 and separator is None:
-        print "difficulty discerning separators, candidates are: "+str(candidates)
+        print("difficulty discerning separators, candidates are: "+str(candidates))
         return
     elif len(candidates) != 1:
         candidates = [separator]
@@ -81,14 +81,14 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
                     tags[part] += 1
 
     if verbose:
-        print tags
+        print(tags)
 
     max_key = max(tags)
 
 
     artist = max_key
     if verbose:
-        print "guess artist is: "+artist
+        print("guess artist is: "+artist)
     if len(other_filenames) > 1:
         for key in tags.keys():
             if tags[key] == len(other_filenames) and len(other_filenames) > 1:
@@ -98,7 +98,7 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     # title = title.replace(candidates[0], '')
     title = re.sub('^[0-9 ]+', '', title)
     if verbose:
-        print "guess title is: "+title
+        print("guess title is: "+title)
 
 
     for separator in separators:
@@ -159,11 +159,11 @@ def reorganize_music(root, mp3_lists):
     """
     for _path in mp3_lists.keys():
         for _mp3_file in mp3_lists[_path]:
-            print _mp3_file
+            print(_mp3_file)
             # update the metadata for the mp3
             _audiofile = load(_mp3_file)
             if _audiofile.tag.album is None or _audiofile.tag.artist is None:
-                print "warning: not able to place file: "+_mp3_file
+                print("warning: not able to place file: "+_mp3_file)
                 continue
             artist = _audiofile.tag.artist
             album = _audiofile.tag.album
@@ -184,7 +184,7 @@ def make_cover_folder(album, artist):
 
 
 def get_image(album="", artist="", search=True):
-    print "getting image from web"
+    print("getting image from web")
     cover_filename = make_cover_folder(album, artist)
     if (not os.path.exists(cover_filename)) and search:
         # first, search xbox live
@@ -192,7 +192,7 @@ def get_image(album="", artist="", search=True):
         try:
             cover_filename = xboxlive_image_search(album, artist)
         except Exception as e:
-            print "xbox failed for reason: "+str(e)
+            print("xbox failed for reason: "+str(e))
 
         if cover_filename is None:
             cover_filename = google_image_search(album, artist)
@@ -214,7 +214,7 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
         if fnmatch(_file, '*.flac'):
             in_flac = os.path.join(root,_file)
             out_mp3 = in_flac.replace('flac', 'mp3')
-            print out_mp3
+            print(out_mp3)
             call(('avconv', '-i', in_flac, '-qscale:a', '0',
                              out_mp3))
 
@@ -245,7 +245,7 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
             out_mp3 = in_flac.replace('m4a', 'mp3')
             parts = ('avconv','-i', in_flac, '-qscale:a', '0',
                              out_mp3)
-            print ' '.join(parts)
+            print(' '.join(parts))
             call(parts)
             _mp4_audio = MP4(in_flac)
             # update the metadata for the mp3
@@ -271,7 +271,7 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
             out_mp3 = in_flac.replace('wma', 'mp3')
             parts = ('avconv','-i', in_flac, '-qscale:a', '0',
                              out_mp3)
-            print ' '.join(parts)
+            print(' '.join(parts))
             call(parts)
             #_mp4_audio = MP4(in_flac)
             # update the metadata for the mp3
@@ -295,20 +295,20 @@ def google_image_search(album, artist):
     key = os.environ.get('GOOGLE_API_KEY')
     service = build("customsearch", "v1", developerKey=key)
     query = album+"+"+artist
-    print "searching web for: "+query
+    print("searching web for: "+query)
     try:
         res = service.cse().list(
             q=query, cx="015111312832054302537:ijkg6sdfkiy", searchType='image',
             num=10, ).execute()
     except Exception as e:
-        print "Google search failed for reason: "+str(e)
+        print("Google search failed for reason: "+str(e))
     time.sleep(1.5)
     images = []
-    print res.items()
+    print(res.items())
     for i in range(0, min(10, len(res.items()))):
         item = res['items'][i]
         _image = urllib.urlretrieve(item['link'])
-        print _image
+        print(_image)
         images.append(_image[0])
     return images
 

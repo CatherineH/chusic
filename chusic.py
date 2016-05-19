@@ -4,7 +4,8 @@ from fnmatch import fnmatch
 import re
 from eyed3 import load
 from googleapiclient.discovery import build
-
+import urllib
+import urllib2
 import time
 from send2trash import send2trash
 from subprocess import call
@@ -320,13 +321,14 @@ def xboxlive_image_search(album, artist):
     # you will need to generate your own client id and key in Azure
     clientId = "chusic"
     clientSecret = os.environ.get('BING_API_KEY')
-
+    print(clientSecret)
     post_data = {"client_id": clientId, "client_secret": clientSecret,
                 "scope": "http://music.xboxlive.com",
                 "grant_type": "client_credentials"}
 
     data = urllib.urlencode(post_data)
     req = urllib2.Request(service, data)
+    print(req)
     response = urllib2.urlopen(req)
     response_string = response.read()
 
@@ -335,11 +337,12 @@ def xboxlive_image_search(album, artist):
     query = urllib.quote_plus(artist)
     music_url = "https://music.xboxlive.com/1/content/music/search?q" \
                 "="+query+"&accessToken=Bearer+" + token
+    print(music_url)
     try:
         request = urllib2.Request(music_url)
         response = urllib2.urlopen(request)
     except Exception as e:
-        raise Exception("xboxlive music request failed for reason: "+str(e))
+        raise Exception("xboxlive music request failed for reason: "+str(e)+"\n on url: "+music_url)
     literal_data = response.read()
     literal_data = literal_data.replace(":false", ":False")
     literal_data = literal_data.replace(":true", ":True")

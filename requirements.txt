@@ -4,3 +4,4 @@ wget
 python-resize-image
 mutagen
 send2trash
+cueparser

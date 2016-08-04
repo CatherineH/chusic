@@ -7,6 +7,8 @@ from googleapiclient.discovery import build
 import urllib
 import urllib2
 import time
+
+from os.path import isfile
 from send2trash import send2trash
 from subprocess import call
 from mutagen.flac import FLAC
@@ -215,9 +217,9 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
         if fnmatch(_file, '*.flac'):
             in_flac = os.path.join(root,_file)
             out_mp3 = in_flac.replace('flac', 'mp3')
-            print(out_mp3)
-            call(('avconv', '-i', in_flac, '-qscale:a', '0',
-                             out_mp3))
+            avconv = ('avconv', '-i', "\""+in_flac+"\"", '-qscale:a', '0',
+                      "\"" +out_mp3+"\"")
+            call(" ".join(avconv), shell=True)
 
             _flac_audio = FLAC(in_flac)
 

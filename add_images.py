@@ -42,8 +42,12 @@ def main():
 
             # update the metadata for the mp3
             _audiofile = eyed3.load(_mp3_file)
+            if _audiofile.tag.artist is None or _audiofile.tag.album is None:
+                print("Could not find tags on track ", _mp3_file, " aborting.")
+                continue
             if len(_audiofile.tag.images) > 0 and not args.ignore:
                 continue
+
             cover_key = _audiofile.tag.artist+"_"+_audiofile.tag.album
             if _audiofile.tag is None:
                 print "initializing tag"

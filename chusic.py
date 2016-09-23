@@ -1,4 +1,5 @@
 import os
+from collections import Counter
 from shutil import rmtree, copytree, copyfile
 from fnmatch import fnmatch
 import re
@@ -8,7 +9,7 @@ import urllib
 import urllib2
 import time
 
-from os.path import isfile
+from os.path import isfile, expanduser
 from send2trash import send2trash
 from subprocess import call
 from mutagen.flac import FLAC
@@ -52,9 +53,14 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     :param filenames: the filenames of the MP3s nearby
     :type filenames: list
     :return: the guessed title
-    :rtype: str
+    :rtype: dict
     """
-    title = strip_filename(filename)
+    verbose = True
+    #print("")
+    #title = strip_filename(filename)
+    title = filename.replace(expanduser("~/Music"), "")
+    title = title.replace(".mp3", "")
+    print("full title is: "+title)
     # now, let's try to see if there's two sections - one for the title, one for the artist
     candidates = []
     for separator in separators:
@@ -63,6 +69,7 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
         parts = _temp.split(separator)
         if len(parts) >= 2:
             candidates.append(separator)
+
     if len(candidates) != 1 and separator is None:
         print("difficulty discerning separators, candidates are: "+str(candidates))
         return
@@ -72,33 +79,37 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     # now guess the artist
     # going to guess that the most common tag is the artist
     tags = {}
-    #print candidates[0]
+    fragments = []
     for other_filename in other_filenames:
-        other_filename = strip_filename(other_filename)
+        other_filename = other_filename.replace(expanduser("~/Music"), "")
+        other_filename = other_filename.replace("/", candidates[0])
+        #other_filename = strip_filename(other_filename)
         parts = other_filename.split(candidates[0])
         for part in parts:
             if len(part) > 0:
-                if part not in tags.keys():
-                    tags[part] = 1
-                else:
-                    tags[part] += 1
-
+                fragments.append(part.strip())
+    # add the first frament again to break ties
+    if len(fragments) >= 1:
+        fragments.append(fragments[0])
+    print(fragments)
+    counts = Counter(fragments)
+    most_common = counts.most_common(2)
     if verbose:
-        print(tags)
+        print(most_common)
 
-    max_key = max(tags)
-
-
-    artist = max_key
+    artist = most_common[0][0]
+    album = most_common[1][0]
     if verbose:
-        print("guess artist is: "+artist)
+        print("guess artist is: ", artist, " and album is: ", album)
     if len(other_filenames) > 1:
         for key in tags.keys():
             if tags[key] == len(other_filenames) and len(other_filenames) > 1:
+
                 title = title.replace(key, '')
     else:
         title = title.replace(artist, "")
     # title = title.replace(candidates[0], '')
+    title = title.split("/")[-1]
     title = re.sub('^[0-9 ]+', '', title)
     if verbose:
         print("guess title is: "+title)
@@ -107,11 +118,13 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     for separator in separators:
         artist = artist.replace(separator, ' ')
         title = title.replace(separator, ' ')
+        album = album.replace(separator, ' ')
 
     artist = artist.capitalize()
     title = title.capitalize()
-
-    return {'title': title, 'artist': artist, 'separator': candidates[0]}
+    album = album.capitalize()
+    return {'title': title, 'artist': artist, 'album': album,
+            'separator': candidates[0]}
 
 
 def copy_dir(foldername=None):

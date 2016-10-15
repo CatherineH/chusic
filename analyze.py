@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 from operator import itemgetter
 from os.path import expanduser
-
+from re import split
 import sys
 from eyed3 import load
 from os import stat
@@ -11,16 +11,17 @@ from os import stat
 from chusic import get_music
 
 parser = ArgumentParser(description='Get ranking of bands by count number and '
-                                    'age.')
+                                    'age, or compare two generated rankings.')
 parser.add_argument('--foldername', type=str, help='The foldername to search')
+parser.add_argument('--compare', type=str, metavar="OLD_RANKING,NEW_RANKING",
+                    help="Compare two generated ranking files.")
 
 band_alternates = {'emerson, lake & palmer': 'emerson, lake & palmer',
                    'emerson lake & palmer': 'emerson, lake & palmer',
                    'f.o.e.s': 'f.o.e.s', 'foes': 'f.o.e.s',
-                   'ghost b.c.': 'ghost'}
+                   'ghost b.c.': 'ghost', u'mg\u0142a': 'mgla'}
 
-def main():
-    args = parser.parse_args()
+def rank(args):
     args.foldername = expanduser(args.foldername)
     new_foldername = args.foldername
     # keep a list of all cues and flacs
@@ -78,10 +79,7 @@ def main():
     combined_rank = {}
     for key in band_ages.keys():
         combined_rank[key] = 0.5*ages_ranking[key] + count_ranking[key]
-
-    print(combined_rank)
     combined_ranking_list = sorted(combined_rank.items(), key=itemgetter(1))
-    print(combined_ranking_list)
     ofh.write("\nCombined Ranking\n")
     ofh.write("Rank\tBand\tCombined Rank\n")
     for i in range(len(combined_ranking_list)):
@@ -89,6 +87,56 @@ def main():
 
     ofh.close()
 
+
+def read_ranking(lines):
+    combined_ranking = lines.split("Combined Rank\n")[1].split('\n')
+    rankings = dict()
+    for line in combined_ranking:
+        parts = split("\s", line)
+        print(parts)
+        if len(parts) > 2:
+            band = " ".join(parts[1:-1])
+            rankings[band] = float(parts[0])
+    print(rankings)
+    return rankings
+
+
+def main():
+    args = parser.parse_args()
+    if args.foldername is not None:
+        rank(args)
+    if args.compare is not None:
+        first_filename = args.compare.split(",")[0]
+        second_filename = args.compare.split(",")[1]
+        first_lines = open(first_filename, "r").read(-1)
+        second_lines = open(second_filename, "r").read(-1)
+        old_rankings = read_ranking(first_lines)
+        new_rankings = read_ranking(second_lines)
+        all_bands = set(old_rankings.keys() + new_rankings.keys())
+        print(all_bands)
+        changes = dict()
+        new_bands = dict()
+
+        for band in all_bands:
+            if band not in old_rankings.keys():
+                new_bands[band] = new_rankings[band]
+                changes[band] = len(new_rankings.keys()) - new_rankings[band]
+            elif band not in new_rankings.keys():
+                changes[band] = old_rankings[band] - len(old_rankings.keys())
+            else:
+                changes[band] = old_rankings[band] - new_rankings[band]
+
+        fh = open("ranking_changes.csv", "w")
+        fh.write("New Bands\n")
+        sorted_new = sorted(new_bands.items(), key=itemgetter(1))
+        for new_band in sorted_new:
+            fh.write(str(new_band)+"\n")
+        fh.write("\nChanged Ranks\n")
+
+        sorted_changes = sorted(changes.items(), key=itemgetter(1))
+        for band in sorted_changes:
+            fh.write(str(band)+"\n")
+        fh.close()
 
 if __name__ == "__main__":
     sys.exit(main())

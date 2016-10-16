@@ -19,15 +19,36 @@ import ast
 import wget
 
 
-
 separators = ['_', '-']
+
+
+def load_mappings():
+    fh_lines = open('mappings.csv', 'r').readlines()
+    mappings = dict()
+    for fh_line in fh_lines:
+        parts = fh_line.split(",")
+        mappings[parts[0]] = parts[1].strip()
+    return mappings
+
+
+def check_mappings(map_key, convert_unicode=True):
+    mappings = load_mappings()
+
+    if map_key in mappings.keys():
+        return_value = mappings[map_key]
+    else:
+        return_value = map_key
+    if convert_unicode:
+        return unicode(return_value)
+    else:
+        return return_value
 
 
 def guess_album(filename, artist='', title=''):
     # first, try with the full filename
     filename = strip_filename(filename)
-    print("guess album filename: "+filename+" artist: "+artist+" title: " \
-                                                               ""+title)
+    print("guess album filename: ", filename, " artist: ", artist, " title: ",
+          title)
     album = filename.lower().replace(artist.lower(), '')
     album = album.lower().replace(title.lower(), '')
     album = album.replace('-copy', '')
@@ -56,11 +77,9 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     :rtype: dict
     """
     verbose = True
-    #print("")
     #title = strip_filename(filename)
     title = filename.replace(expanduser("~/Music"), "")
     title = title.replace(".mp3", "")
-    print("full title is: "+title)
     # now, let's try to see if there's two sections - one for the title, one for the artist
     candidates = []
     for separator in separators:
@@ -91,7 +110,7 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     # add the first frament again to break ties
     if len(fragments) >= 1:
         fragments.append(fragments[0])
-    print(fragments)
+    #print(fragments)
     counts = Counter(fragments)
     most_common = counts.most_common(2)
     if verbose:
@@ -104,21 +123,29 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     if len(other_filenames) > 1:
         for key in tags.keys():
             if tags[key] == len(other_filenames) and len(other_filenames) > 1:
-
                 title = title.replace(key, '')
-    else:
-        title = title.replace(artist, "")
-    # title = title.replace(candidates[0], '')
+    # remove the alternate names for the artist
+    alternate_artists = [key for key in load_mappings().keys() if load_mappings()[key] == artist]
+    title = title.lower()
+    title = title.replace(artist.lower(), "")
+    for checked_artist in alternate_artists:
+        title = title.replace(checked_artist.lower(), "")
     title = title.split("/")[-1]
-    title = re.sub('^[0-9 ]+', '', title)
-    if verbose:
-        print("guess title is: "+title)
+    #print(title, artist, checked_artist)
+    # title = title.replace(candidates[0], '')
 
 
     for separator in separators:
         artist = artist.replace(separator, ' ')
         title = title.replace(separator, ' ')
         album = album.replace(separator, ' ')
+    if len(title) > len(album):
+        title = re.sub(album.lower(), "", title, 1)
+    title = re.sub('^[0-9 ]+', '', title)
+    title = re.sub('^\.', '', title)
+    title = title.strip().capitalize()
+    if verbose:
+        print("guess title is: "+title)
 
     artist = artist.capitalize()
     title = title.capitalize()
@@ -166,6 +193,7 @@ def get_music(new_foldername):
                 path_images[_dir] = os.path.join(root, 'thumb.jpg')
     return {'mp3': mp3_lists, 'images': path_images}
 
+
 def reorganize_music(root, mp3_lists):
     """
     reorganize the music collection based on the format artist/album/track.mp3
@@ -175,7 +203,7 @@ def reorganize_music(root, mp3_lists):
     """
     for _path in mp3_lists.keys():
         for _mp3_file in mp3_lists[_path]:
-            print(_mp3_file)
+            #print(_mp3_file)
             # update the metadata for the mp3
             _audiofile = load(_mp3_file)
             if _audiofile.tag.album is None or _audiofile.tag.artist is None:
@@ -189,6 +217,7 @@ def reorganize_music(root, mp3_lists):
             _mp3_file = _mp3_file.decode('utf-8')
             new_filename = os.path.join(directory, os.path.basename(_mp3_file))
             copyfile(_mp3_file, new_filename)
+
 
 def make_cover_folder(album, artist):
     # first, check to see whether the file already exists in the covers

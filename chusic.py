@@ -6,7 +6,13 @@ import re
 from eyed3 import load
 from googleapiclient.discovery import build
 import urllib
-import urllib2
+try:
+    # For Python 3.0 and later
+    from urllib.request import urlopen, Request
+except ImportError:
+    # Fall back to Python 2's urllib2
+    from urllib2 import urlopen, Request
+
 import time
 
 from os.path import isfile, expanduser
@@ -371,9 +377,9 @@ def xboxlive_image_search(album, artist):
                 "grant_type": "client_credentials"}
 
     data = urllib.urlencode(post_data)
-    req = urllib2.Request(service, data)
+    req = Request(service, data)
     print(req)
-    response = urllib2.urlopen(req)
+    response = urlopen(req)
     response_string = response.read()
 
     response_string = ast.literal_eval(response_string)
@@ -383,8 +389,8 @@ def xboxlive_image_search(album, artist):
                 "="+query+"&accessToken=Bearer+" + token
     print(music_url)
     try:
-        request = urllib2.Request(music_url)
-        response = urllib2.urlopen(request)
+        request = Request(music_url)
+        response = urlopen(request)
     except Exception as e:
         raise Exception("xboxlive music request failed for reason: "+str(e)+"\n on url: "+music_url)
     literal_data = response.read()

@@ -10,9 +10,12 @@ from os import stat
 
 from chusic import get_music
 
-parser = ArgumentParser(description='Get ranking of bands by count number and '
-                                    'age, or compare two generated rankings.')
-parser.add_argument('--foldername', type=str, help='The foldername to search')
+# does not currently work for python3 due to eye3d tags arg!!!
+parser = ArgumentParser(description="Get ranking of bands by count number and "
+                                    "age, or compare two generated rankings.")
+parser.add_argument('--foldername', type=str, help="The foldername to search")
+parser.add_argument('--alternate', type=str, help="An alternate foldername, "
+                                                   "for completeness of history")
 parser.add_argument('--compare', type=str, metavar="OLD_RANKING,NEW_RANKING",
                     help="Compare two generated ranking files.")
 
@@ -21,11 +24,8 @@ band_alternates = {'emerson, lake & palmer': 'emerson, lake & palmer',
                    'f.o.e.s': 'f.o.e.s', 'foes': 'f.o.e.s',
                    'ghost b.c.': 'ghost', u'mg\u0142a': 'mgla'}
 
-def rank(args):
-    args.foldername = expanduser(args.foldername)
-    new_foldername = args.foldername
-    # keep a list of all cues and flacs
-    file_lists = get_music(new_foldername=new_foldername)
+
+def map_age_count(file_lists):
     band_ages = {}
     band_count = {}
     for files in file_lists['mp3'].keys():
@@ -46,6 +46,22 @@ def rank(args):
                 band_count[_artist] = 1
             else:
                 band_count[_artist] += 1
+    return [band_ages, band_count]
+
+
+def rank(args):
+    args.foldername = expanduser(args.foldername)
+    alt_foldername = args.alternate
+    new_foldername = args.foldername
+    # keep a list of all cues and flacs
+    [band_ages, band_count] = map_age_count(get_music(new_foldername=new_foldername))
+    if alt_foldername is not None:
+        [alt_ages, _] = map_age_count(get_music(new_foldername=alt_foldername))
+    else:
+        alt_ages = {}
+    for band in band_ages.keys():
+        if band in alt_ages.keys():
+            band_ages[band] = alt_ages[band]
 
     ages_ranking_list = sorted(band_ages.items(), key=itemgetter(1))#.reverse()
     ages_ranking = {}

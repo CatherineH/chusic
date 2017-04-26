@@ -4,7 +4,10 @@ from shutil import rmtree, copytree, copyfile
 from fnmatch import fnmatch
 import re
 from eyed3 import load
-from googleapiclient.discovery import build
+try:
+    from googleapiclient.discovery import build
+except:
+    print("problem loading google api client")
 import urllib
 try:
     # For Python 3.0 and later

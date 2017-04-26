@@ -6,8 +6,8 @@ import re
 from eyed3 import load
 try:
     from googleapiclient.discovery import build
-except:
-    print("problem loading google api client")
+except Exception:
+    build = None
 import urllib
 try:
     # For Python 3.0 and later
@@ -345,6 +345,9 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
 
 
 def google_image_search(album, artist):
+    if not build:
+        print("googleapi not available")
+        return None
     cover_filename = make_cover_folder(album, artist)
     key = os.environ.get('GOOGLE_API_KEY')
     service = build("customsearch", "v1", developerKey=key)

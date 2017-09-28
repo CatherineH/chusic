@@ -1,5 +1,5 @@
 import os
-from collections import Counter
+from collections import Counter, defaultdict
 from shutil import rmtree, copytree, copyfile
 from fnmatch import fnmatch
 import re
@@ -181,7 +181,7 @@ def get_music(new_foldername):
     # recursively walk through the directory structure
     # if an mp3 is found, add it to the list of tracks for that folder
     # if an image is found, save it as the thumbnail for that folder
-    mp3_lists = {}
+    mp3_lists = defaultdict(list)
     path_images = {}
     for root, dirs, files in os.walk(new_foldername):
         for name in files:
@@ -190,12 +190,8 @@ def get_music(new_foldername):
             if name[0] == '.':
                 continue
             if fnmatch(name.lower(), "*.mp3") or fnmatch(name.lower(), ".m4a"):
-                if _dir in mp3_lists.keys():
-                    mp3_lists[_dir].append(os.path.join(root, name))
-                else:
-                    mp3_lists[_dir] = [os.path.join(root, name)]
-            #else:
-            #    print "file: "+name+" did not match"
+                mp3_lists[_dir].append(os.path.join(root, name))
+
             if fnmatch(name.lower(), "*.jpg") or fnmatch(name.lower(),
                                                          "*.jpeg"):
                 os.rename(os.path.join(root, name), os.path.join(root, 'thumb.jpg'))

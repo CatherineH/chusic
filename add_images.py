@@ -22,6 +22,7 @@ parser.set_defaults(web_search=False)
 parser.set_defaults(copy=False)
 parser.set_defaults(ignore=False)
 
+
 def main():
     args = parser.parse_args()
     if not hasattr(args, 'online'):

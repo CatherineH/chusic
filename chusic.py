@@ -1,4 +1,5 @@
 import os
+import zipfile
 from collections import Counter, defaultdict
 from shutil import rmtree, copytree, copyfile
 from fnmatch import fnmatch
@@ -182,20 +183,32 @@ def get_music(new_foldername):
     # if an mp3 is found, add it to the list of tracks for that folder
     # if an image is found, save it as the thumbnail for that folder
     mp3_lists = defaultdict(list)
+
     path_images = {}
+
+    def add_file(name, root):
+        if fnmatch(name.lower(), "*.mp3") or fnmatch(name.lower(), ".m4a"):
+            mp3_lists[_dir].append(os.path.join(root, name))
+        if fnmatch(name.lower(), "*.jpg") or fnmatch(name.lower(),
+                                                     "*.jpeg"):
+            thumbnail_file = os.path.join(root, 'thumb.jpg')
+            os.rename(os.path.join(root, name), thumbnail_file)
+            path_images[_dir] = thumbnail_file
+
     for root, dirs, files in os.walk(new_foldername):
         for name in files:
             _dir = root
             # ignore hidden files
             if name[0] == '.':
                 continue
-            if fnmatch(name.lower(), "*.mp3") or fnmatch(name.lower(), ".m4a"):
-                mp3_lists[_dir].append(os.path.join(root, name))
+            add_file(name, root)
+            if fnmatch(name.lower(), "*.zip"):
+                # unzip the directory
+                z = zipfile.ZipFile(os.path.join(root, name))
+                for f in z.namelist():
+                    z.extract(f, root)
+                    add_file(f, root)
 
-            if fnmatch(name.lower(), "*.jpg") or fnmatch(name.lower(),
-                                                         "*.jpeg"):
-                os.rename(os.path.join(root, name), os.path.join(root, 'thumb.jpg'))
-                path_images[_dir] = os.path.join(root, 'thumb.jpg')
     return {'mp3': mp3_lists, 'images': path_images}
 
 
@@ -208,7 +221,6 @@ def reorganize_music(root, mp3_lists):
     """
     for _path in mp3_lists.keys():
         for _mp3_file in mp3_lists[_path]:
-            #print(_mp3_file)
             # update the metadata for the mp3
             _audiofile = load(_mp3_file)
             if _audiofile.tag.album is None or _audiofile.tag.artist is None:

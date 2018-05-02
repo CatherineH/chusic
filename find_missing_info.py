@@ -10,9 +10,15 @@ parser = ArgumentParser(description='Identify missing information in a file '
 parser.add_argument('--foldername', type=str, help='The foldername to search')
 
 
+def decode_unicode(instr):
+    try:
+        return unicode(instr)
+    except UnicodeDecodeError:
+        return instr.decode('utf-8')
+
+
 def main():
     args = parser.parse_args()
-    #new_foldername = copy_dir(args.foldername)
     new_foldername = args.foldername
     file_lists = get_music(new_foldername=new_foldername)
     mp3_lists = file_lists['mp3']
@@ -31,32 +37,27 @@ def main():
             # remove whitespace and
             for key in guess.keys():
                 guess[key] = guess[key].strip().title()
-            print(guess)
             prev_separator = guess['separator']
             _audiofile = eyed3.load(_mp3_file)
+            if _audiofile.tag is None:
+                _audiofile.initTag()
             if _audiofile.tag.title is None:
-                print "file: "+_mp3_file+" is missing the title, guess is: \""+guess['title']+"\""
                 response = raw_input("Accept new title? (y/n)")
                 if response == 'y':
-                    _audiofile.tag.title = unicode(guess['title'])
+                    _audiofile.tag.title = decode_unicode(guess['title'])
                     save_track = True
             if _audiofile.tag.album is None:
                 album = guess['album']
-                #album = guess_album(_mp3_file, artist=guess['artist'],
-                #                    title=guess['title'])
-                print "file: "+_mp3_file+" is missing the album, guess is: \""+album+"\""
                 response = raw_input("Accept new album? (y/n)")
                 if response == 'y':
-                    _audiofile.tag.album = unicode(album)
+                    _audiofile.tag.album = decode_unicode(album)
                     save_track = True
             if _audiofile.tag.artist is None:
-                 print "file: "+_mp3_file+" is missing the artist, guess is: \""+guess['artist']+"\""
-                 response = raw_input("Accept new artist? (y/n)")
-                 if response == 'y':
-                    _audiofile.tag.artist = unicode(guess['artist'])
+                response = raw_input("Accept new artist? (y/n)")
+                if response == 'y':
+                    _audiofile.tag.artist = decode_unicode(guess['artist'])
                     save_track = True
             if len(_audiofile.tag.images) == 0:
-                print "file: "+_mp3_file+" missing images"
                 if _path in path_images:
                     response = raw_input("Use image: "+str(path_images[_path])+" ("
                                                                   "y/n)?")

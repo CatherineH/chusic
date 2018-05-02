@@ -87,7 +87,6 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     :rtype: dict
     """
     verbose = True
-    #title = strip_filename(filename)
     title = filename.replace(expanduser("~/Music"), "")
     title = title.replace(".mp3", "")
     # now, let's try to see if there's two sections - one for the title, one for the artist
@@ -114,13 +113,14 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
         other_filename = other_filename.replace("/", candidates[0])
         #other_filename = strip_filename(other_filename)
         parts = other_filename.split(candidates[0])
+
         for part in parts:
             if len(part) > 0:
                 fragments.append(part.strip())
-    # add the first frament again to break ties
+    # add the first fragment again to break ties
     if len(fragments) >= 1:
         fragments.append(fragments[0])
-    #print(fragments)
+
     counts = Counter(fragments)
     most_common = counts.most_common(2)
     if verbose:
@@ -141,8 +141,6 @@ def guess_title(filename, other_filenames, separator=None, verbose=False):
     for checked_artist in alternate_artists:
         title = title.replace(checked_artist.lower(), "")
     title = title.split("/")[-1]
-    #print(title, artist, checked_artist)
-    # title = title.replace(candidates[0], '')
 
 
     for separator in separators:
@@ -333,9 +331,7 @@ def convert_files(root, cuesheet=None, thumbnail_filename=None):
             out_mp3 = in_flac.replace('wma', 'mp3')
             parts = ('avconv','-i', in_flac, '-qscale:a', '0',
                              out_mp3)
-            print(' '.join(parts))
             call(parts)
-            #_mp4_audio = MP4(in_flac)
             # update the metadata for the mp3
             _audiofile = load(out_mp3)
             if thumbnail_filename is not None:

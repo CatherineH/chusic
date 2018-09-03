@@ -27,6 +27,7 @@ from mutagen.mp4 import MP4
 
 import ast
 import wget
+import unidecode
 
 
 separators = ['_', '-']
@@ -49,7 +50,7 @@ def check_mappings(map_key, convert_unicode=True):
     else:
         return_value = map_key
     if convert_unicode:
-        return unicode(return_value)
+        return unicode(return_value, 'utf-8')
     else:
         return return_value
 
@@ -229,8 +230,9 @@ def reorganize_music(root, mp3_lists):
             directory = os.path.join(root, artist, album)
             if not os.path.exists(directory):
                 os.makedirs(directory)
-            _mp3_file = _mp3_file.decode('utf-8')
-            new_filename = os.path.join(directory, os.path.basename(_mp3_file))
+
+            # there's some funky behavior with this line regarding files with unicode characters
+            new_filename = os.path.join(directory, os.path.basename(_mp3_file.decode('utf-8')))
             copyfile(_mp3_file, new_filename)
 
 
